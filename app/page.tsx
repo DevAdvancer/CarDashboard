@@ -1,8 +1,8 @@
-import { getCarData } from "@/lib/csv-parser";
+import { MOCK_CARS } from "@/lib/mockdata";
 import { GalleryGrid } from "@/components/dashboard/GalleryGrid";
 
-export default async function Home() {
-  const cars = await getCarData();
+export default function Home() {
+  const cars = MOCK_CARS;
 
   return (
     <main className="min-h-screen bg-background">
