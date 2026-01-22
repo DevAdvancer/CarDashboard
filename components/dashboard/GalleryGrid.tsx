@@ -3,34 +3,60 @@
 import { CarData } from "@/lib/types";
 import { CarCard } from "./CarCard";
 import { Input } from "@/components/ui/input";
-import { useState, useMemo } from "react";
+import { useState, useCallback, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getCars } from "@/app/actions/get-cars";
+import { useEffect } from "react";
+// Debounce helper
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 interface GalleryGridProps {
-  initialCars: CarData[];
+  initialCars: {
+    cars: any[]; // Using any to avoid strict shape mismatch if using mapped types, or use CarData[]
+    totalCount: number;
+  };
 }
 
 export function GalleryGrid({ initialCars }: GalleryGridProps) {
+  const [cars, setCars] = useState<CarData[]>(initialCars.cars);
+  const [totalCount, setTotalCount] = useState(initialCars.totalCount);
+  const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [visibleCount, setVisibleCount] = useState(20);
+  const debouncedSearch = useDebounce(searchTerm, 300);
+  const [isPending, startTransition] = useTransition();
 
-  const filteredCars = useMemo(() => {
-    if (!searchTerm) return initialCars;
-    const lower = searchTerm.toLowerCase();
-    return initialCars.filter(
-      (car) =>
-        car.brand?.toLowerCase().includes(lower) ||
-        car.model?.toLowerCase().includes(lower) ||
-        car.body_style?.toLowerCase().includes(lower)
-    );
-  }, [initialCars, searchTerm]);
+  // Reset when search changes
+  useEffect(() => {
+    const fetchCars = async () => {
+      const result = await getCars({ page: 1, limit: 20, query: debouncedSearch });
+      setCars(result.cars as any);
+      setTotalCount(result.totalCount);
+      setPage(1);
+    };
 
-  const visibleCars = filteredCars.slice(0, visibleCount);
+    startTransition(() => {
+        fetchCars();
+    });
+  }, [debouncedSearch]);
 
-  const handleLoadMore = () => {
-    setVisibleCount((prev) => prev + 20);
+
+  const handleLoadMore = async () => {
+    const nextPage = page + 1;
+    const result = await getCars({ page: nextPage, limit: 20, query: debouncedSearch });
+
+    setCars((prev) => [...prev, ...(result.cars as any)]);
+    setPage(nextPage);
   };
 
   return (
@@ -43,7 +69,7 @@ export function GalleryGrid({ initialCars }: GalleryGridProps) {
               Showroom
             </h1>
             <Badge variant="secondary" className="mt-1">
-              {filteredCars.length} Cars
+              {totalCount} Cars
             </Badge>
           </div>
 
@@ -53,10 +79,7 @@ export function GalleryGrid({ initialCars }: GalleryGridProps) {
               placeholder="Search by Brand, Model, or Style..."
               className="pl-9 bg-secondary/50 border-0 focus-visible:ring-1 focus-visible:ring-primary"
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setVisibleCount(20); // Reset pagination on search
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
@@ -64,34 +87,35 @@ export function GalleryGrid({ initialCars }: GalleryGridProps) {
 
       {/* Grid */}
       <div className="max-w-7xl mx-auto px-4">
-        {visibleCars.length === 0 ? (
+        {cars.length === 0 && !isPending ? (
           <div className="text-center py-20 text-muted-foreground">
             No cars found matching "{searchTerm}"
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {visibleCars.map((car, idx) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 opacity-100 transition-opacity duration-300" style={{ opacity: isPending ? 0.5 : 1 }}>
+            {cars.map((car, idx) => (
               <CarCard key={`${car.brand}-${car.model}-${idx}`} car={car} />
             ))}
           </div>
         )}
 
         {/* Load More */}
-        {visibleCount < filteredCars.length && (
+        {cars.length < totalCount && (
           <div className="flex justify-center py-10">
             <Button
                 onClick={handleLoadMore}
                 variant="secondary"
                 size="lg"
                 className="px-8 shadow-lg hover:shadow-xl transition-all"
+                disabled={isPending}
             >
-              Load More Cars ({filteredCars.length - visibleCount} remaining)
+              {isPending ? 'Loading...' : `Load More Cars (${totalCount - cars.length} remaining)`}
             </Button>
           </div>
         )}
 
         <div className="text-center py-4 text-xs text-muted-foreground">
-            Showing {Math.min(visibleCount, filteredCars.length)} of {filteredCars.length} models
+            Showing {cars.length} of {totalCount} models
         </div>
       </div>
     </div>
