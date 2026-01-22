@@ -17,7 +17,7 @@ export function CarCard({ car }: CarCardProps) {
 
   // Parse image URLs safely
   const images = car.image_urls
-    ? car.image_urls.split(", ").map((url) => url.trim())
+    ? String(car.image_urls).split(", ").map((url) => url.trim())
     : [];
   const mainImage = images[0] || "/placeholder-car.jpg"; // You might want a better placeholder logic
 
@@ -56,7 +56,7 @@ export function CarCard({ car }: CarCardProps) {
             <div className="flex flex-wrap gap-2 mt-3">
               {car.body_style && (
                 <Badge variant="outline" className="text-xs">
-                  {car.body_style.split(" (")[0]}
+                  {String(car.body_style || "").split(" (")[0]}
                 </Badge>
               )}
               {car.drive_type && (
@@ -67,7 +67,7 @@ export function CarCard({ car }: CarCardProps) {
             </div>
           </CardContent>
           <CardFooter className="p-4 pt-0 text-xs text-muted-foreground flex justify-between items-center">
-            <span>{car.engine_specs_title?.split(" ")[0] || "Engine N/A"}</span>
+            <span>{String(car.engine_specs_title || "").split(" ")[0] || "Engine N/A"}</span>
             <span>{car.top_speed || "N/A"}</span>
           </CardFooter>
         </Card>

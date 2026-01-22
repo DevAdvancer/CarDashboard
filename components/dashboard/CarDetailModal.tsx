@@ -23,7 +23,7 @@ interface CarDetailModalProps {
 export function CarDetailModal({ car, isOpen, onClose }: CarDetailModalProps) {
   // Parse images
   const images = car.image_urls
-    ? car.image_urls.split(", ").map((url) => url.trim())
+    ? String(car.image_urls).split(", ").map((url) => url.trim())
     : [];
   const [activeImage, setActiveImage] = useState(images[0] || "/placeholder-car.jpg");
 
@@ -40,12 +40,13 @@ export function CarDetailModal({ car, isOpen, onClose }: CarDetailModalProps) {
   // Helper to format production years
   const formatYears = (years: string) => {
     if (!years) return "";
+    const strYears = String(years);
     // Handle "2021Present" -> "2021 - Present"
-    if (years.includes("Present")) {
-        return years.replace(/(\d{4})([A-Za-z]+)/, '$1 - $2');
+    if (strYears.includes("Present")) {
+        return strYears.replace(/(\d{4})([A-Za-z]+)/, '$1 - $2');
     }
     // Handle concatenated years without spaces if any
-    return years;
+    return strYears;
   };
 
   return (
@@ -119,7 +120,7 @@ export function CarDetailModal({ car, isOpen, onClose }: CarDetailModalProps) {
                                 </div>
                                  <div className="p-3 rounded-lg bg-secondary/50">
                                     <div className="text-xs text-muted-foreground uppercase">Power</div>
-                                    <div className="font-bold text-primary text-sm line-clamp-2 leading-snug" title={car.power}>{car.power ? car.power.split("(")[0] : "-"}</div>
+                                    <div className="font-bold text-primary text-sm line-clamp-2 leading-snug" title={car.power}>{car.power ? String(car.power).split("(")[0] : "-"}</div>
                                 </div>
                                  <div className="p-3 rounded-lg bg-secondary/50">
                                     <div className="text-xs text-muted-foreground uppercase">Drive</div>
